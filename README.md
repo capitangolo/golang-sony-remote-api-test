@@ -4,7 +4,7 @@ I'm learning go and [did some tests](https://twitter.com/capitangolo/status/1264
 
 My first go code, so this follows no guidelines or best practices. Happy to get your feedback!
 
-## Building
+## Building
 
 Just:
 
