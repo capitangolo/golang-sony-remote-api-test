@@ -2,11 +2,14 @@ package main
 
 import (
     "bytes"
+    "encoding/json"
 		"flag"
     "fmt"
+    "io"
 		"io/ioutil"
     "net/http"
     "net/url"
+    "os"
     "path"
 		"strings"
 )
@@ -14,12 +17,14 @@ import (
 func main() {
 		var endpoint string
 		var action string
+    var output_picture string
     var help bool
 
 		actions := []string{"actTakePicture"}
 
 		flag.StringVar(&endpoint, "endpoint", "", "The endpoint")
 		flag.StringVar(&action, "action", "", "What action to perform. Supported actions are: " + strings.Join(actions, ", "))
+		flag.StringVar(&output_picture, "output_picture", "", "If present, after taking a picture it will be saved as the given file name.")
 		flag.BoolVar(&help, "help", false, "Show the usage instructions")
 		flag.Parse()
 
@@ -32,7 +37,10 @@ func main() {
 		} else if IsActionValid(action, actions) {
 				switch action {
 				case "actTakePicture":
-						actTakePicture(endpoint)
+						res := API_actTakePicture(endpoint)
+            if output_picture != "" && res.Status == "200 OK" {
+                SavePicture(res.Result[0][0], output_picture)
+            }
 				}
 		} else {
 				PrintHelp("Action: '" + action + "' is not yet supported. Supported actions are: " + strings.Join(actions, ", "))
@@ -54,7 +62,40 @@ func IsActionValid(action string, valid_actions []string) bool {
     return false
 }
 
-func actTakePicture(endpoint string) {
+// From: https://golangcode.com/download-a-file-from-a-url/
+func DownloadFile(url string, filepath string) error {
+
+		// Get the data
+		resp, err := http.Get(url)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		// Create the file
+		out, err := os.Create(filepath)
+		if err != nil {
+			return err
+		}
+		defer out.Close()
+
+		// Write the body to file
+		_, err = io.Copy(out, resp.Body)
+		return err
+}
+
+
+func SavePicture(image_url string, output_picture string) error {
+		return DownloadFile(image_url, output_picture)
+}
+
+type API_actTakePicture_Result struct {
+    Status string
+		Result [][]string
+    Id int
+}
+
+func API_actTakePicture(endpoint string) API_actTakePicture_Result {
     action_url, err := url.Parse(endpoint)
     if err != nil {
         panic(err)
@@ -78,6 +119,14 @@ func actTakePicture(endpoint string) {
 
     fmt.Println("response Status:", resp.Status)
     fmt.Println("response Headers:", resp.Header)
-    body, _ := ioutil.ReadAll(resp.Body)
-    fmt.Println("response Body:", string(body))
+    body_data, _ := ioutil.ReadAll(resp.Body)
+    fmt.Println("response Body:", string(body_data))
+
+		var result API_actTakePicture_Result
+		result.Status = resp.Status
+		if resp.Status == "200 OK" {
+				json.Unmarshal(body_data, &result)
+		}
+
+		return result
 }
