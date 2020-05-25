@@ -18,6 +18,7 @@ func main() {
 		var endpoint string
 		var action string
     var output_picture string
+    var output_picture_url string
     var help bool
 
 		actions := []string{"actTakePicture"}
@@ -25,15 +26,16 @@ func main() {
 		flag.StringVar(&endpoint, "endpoint", "", "The endpoint")
 		flag.StringVar(&action, "action", "", "What action to perform. Supported actions are: " + strings.Join(actions, ", "))
 		flag.StringVar(&output_picture, "output_picture", "", "If present, after taking a picture it will be saved as the given file name.")
+		flag.StringVar(&output_picture_url, "output_picture_url", "", "If present, after taking a picture it will save the picture url at given file name.")
 		flag.BoolVar(&help, "help", false, "Show the usage instructions")
 		flag.Parse()
 
 		if help {
 				PrintHelp("")
-		} else if endpoint == "" {
-				PrintHelp("'endpoint' is required.")
 		} else if action == "" {
 				PrintHelp("'action' is required.")
+		} else if endpoint == "" {
+				PrintHelp("'endpoint' is required.")
 		} else if IsActionValid(action, actions) {
 				switch action {
 				case "actTakePicture":
@@ -41,6 +43,9 @@ func main() {
             if output_picture != "" && res.Status == "200 OK" {
                 SavePicture(res.Result[0][0], output_picture)
             }
+						if output_picture_url != "" && res.Status == "200 OK" {
+                SavePictureURL(res.Result[0][0], output_picture_url)
+						}
 				}
 		} else {
 				PrintHelp("Action: '" + action + "' is not yet supported. Supported actions are: " + strings.Join(actions, ", "))
@@ -87,6 +92,11 @@ func DownloadFile(url string, filepath string) error {
 
 func SavePicture(image_url string, output_picture string) error {
 		return DownloadFile(image_url, output_picture)
+}
+
+func SavePictureURL(image_url string, output_file string) error {
+    image_url_data := []byte(image_url)
+    return ioutil.WriteFile(output_file, image_url_data, 0644)
 }
 
 type API_actTakePicture_Result struct {
